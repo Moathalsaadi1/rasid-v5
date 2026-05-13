@@ -1,0 +1,3 @@
+FROM projectdiscovery/nuclei:latest
+RUN nuclei -update-templates -duc 2>/dev/null || true
+ENTRYPOINT ["nuclei"]

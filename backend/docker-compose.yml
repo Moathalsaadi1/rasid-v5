@@ -1,0 +1,101 @@
+
+services:
+  db:
+    image: postgres:16
+    container_name: rasid-db
+    environment:
+      POSTGRES_USER: rasid
+      POSTGRES_PASSWORD: rasid_password
+      POSTGRES_DB: rasid
+    ports:
+      - "5433:5432"  # ← استخدم 5433 بدل 5432
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rasid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rasid-redis
+    ports:
+      - "6380:6379"  # ← استخدم 6380 بدل 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  docker:
+    image: docker:dind
+    container_name: rasid-docker
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+      DOCKER_BUILDKIT: "0"
+    command:
+      - "dockerd"
+      - "--host=tcp://0.0.0.0:2375"
+      - "--host=unix:///var/run/docker.sock"
+      - "--dns=8.8.8.8"
+      - "--dns=1.1.1.1"
+    ports:
+      - "2375:2375"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: rasid-api
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://rasid:rasid_password@db:5432/rasid
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND: redis://redis:6379/1
+      DOCKER_HOST: tcp://docker:2375
+      FLASK_ENV: development
+    command: >
+      bash -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        alembic upgrade head &&
+        gunicorn -w 4 -b 0.0.0.0:8000 --reload 'app:create_app()'
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      docker:
+        condition: service_started
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: rasid-celery
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://rasid:rasid_password@db:5432/rasid
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND: redis://redis:6379/1
+      DOCKER_HOST: tcp://docker:2375
+    command: >
+      bash -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        celery -A app.celery_app worker --loglevel=info
+      "
+    depends_on:
+      - db
+      - redis
+      - docker
+
+volumes:
+  pg_data:

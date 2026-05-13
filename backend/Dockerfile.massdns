@@ -1,0 +1,33 @@
+# massdns image with a curated public-resolver list baked in.
+#
+# Why a custom image:
+#   The official `blechschmidt/massdns` does not ship a resolvers file by
+#   default. RASID's command always passes `-r /etc/massdns/resolvers.txt`,
+#   so the file has to exist at that exact path inside the container.
+FROM alpine:3.19 AS builder
+
+RUN apk add --no-cache git build-base
+RUN git clone --depth 1 https://github.com/blechschmidt/massdns.git /src \
+ && make -C /src
+
+FROM alpine:3.19
+
+RUN apk add --no-cache libstdc++
+
+COPY --from=builder /src/bin/massdns /usr/local/bin/massdns
+
+# A small, conservative set of well-known public resolvers. Replace this
+# with your own list (e.g. trickest/resolvers) if you need broader coverage.
+RUN mkdir -p /etc/massdns && \
+    printf '%s\n' \
+      "1.1.1.1" \
+      "1.0.0.1" \
+      "8.8.8.8" \
+      "8.8.4.4" \
+      "9.9.9.9" \
+      "149.112.112.112" \
+      "208.67.222.222" \
+      "208.67.220.220" \
+      > /etc/massdns/resolvers.txt
+
+ENTRYPOINT ["/usr/local/bin/massdns"]
