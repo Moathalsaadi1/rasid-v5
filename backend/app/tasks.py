@@ -83,12 +83,33 @@ def _resolve_args(db, user_id: int | None, tool_name: str) -> list[str] | None:
     import json
     try:
         parsed = json.loads(row.args)
-        if isinstance(parsed, list) and all(isinstance(x, str) for x in parsed):
-            return parsed
     except (json.JSONDecodeError, ValueError):
-        logger.warning("Invalid custom args for user=%s tool=%s — falling back to defaults",
-                       user_id, tool_name)
-    return None
+        logger.warning(
+            "Invalid custom args for user=%s tool=%s — falling back to defaults",
+            user_id, tool_name,
+        )
+        return None
+
+    if not (isinstance(parsed, list) and all(isinstance(x, str) for x in parsed)):
+        logger.warning(
+            "Custom args for user=%s tool=%s not a list of strings — ignored",
+            user_id, tool_name,
+        )
+        return None
+
+    # Merge with defaults: start from spec.default_args and append any
+    # user-supplied arg not already present. This makes "user adds -sV to
+    # nmap" produce "-T3 -F -oX - -sV" instead of just "-sV".
+    spec = get_tool(tool_name)
+    if not spec:
+        return parsed
+
+    merged = list(spec.default_args)
+    for arg in parsed:
+        if arg not in merged:
+            merged.append(arg)
+
+    return merged
 
 
 # ─── Notification trigger ─────────────────────────────────────────────────

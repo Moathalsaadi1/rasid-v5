@@ -55,7 +55,7 @@ REGISTRY: dict[str, ToolSpec] = {
             "-p",                                # specific ports
             "-oX",                               # XML output (always required)
         }),
-        timeout_seconds=600,
+        timeout_seconds=1800,
     ),
 
     "httpx": ToolSpec(
@@ -81,14 +81,15 @@ REGISTRY: dict[str, ToolSpec] = {
         name="nuclei",
         image=_img("TOOL_NUCLEI_IMAGE", "projectdiscovery/nuclei:latest"),
         description="Template-based vulnerability scanner",
-        default_args=(
-            "-u", "{TARGET}",
-            "-jsonl", "-omit-raw",
-            "-severity", "medium,high,critical",
-            "-rl", "25", "-c", "5",
-            "-timeout", "5", "-retries", "1",
-            "-duc",  # disable update check
-        ),
+     default_args=(
+    "-u", "{TARGET}",
+    "-jsonl", "-omit-raw",
+    "-tags", "kev",                         
+    "-severity", "medium,high,critical",
+    "-rl", "25", "-c", "5",
+    "-timeout", "5", "-retries", "1",
+    "-duc",
+    ),
         allowed_flags=frozenset({
             "-u", "-jsonl", "-omit-raw", "-severity", "-rl", "-c",
             "-timeout", "-retries", "-duc", "-tags", "-exclude-tags",
@@ -127,7 +128,7 @@ REGISTRY: dict[str, ToolSpec] = {
 
     "masscan": ToolSpec(
         name="masscan",
-        image=_img("TOOL_MASSCAN_IMAGE", "ilyaglow/masscan:latest"),
+        image=_img("TOOL_MASSCAN_IMAGE", "secsi/masscan:latest"),
         description="Fast port scanner (large ranges)",
         # Conservative defaults: top common ports, low rate. The user can
         # only tune within the allowed_flags whitelist.
@@ -142,7 +143,7 @@ REGISTRY: dict[str, ToolSpec] = {
             "-p", "--ports", "--rate", "--wait", "-oJ", "-oX",
             "--top-ports", "--banners", "--open-only",
         }),
-        timeout_seconds=600,
+        timeout_seconds=1800,
     ),
 
     "massdns": ToolSpec(
