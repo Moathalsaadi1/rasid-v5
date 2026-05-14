@@ -33,3 +33,9 @@ pg_data/
 
 # Logs
 *.log
+
+# Local backups & reports
+backend/docker-compose.yml.bak*
+backend/rasid_report_*.md
+backend/rasid_report_*.html
+backend/rasid_report_*.json
