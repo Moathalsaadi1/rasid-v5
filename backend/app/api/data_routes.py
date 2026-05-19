@@ -115,3 +115,79 @@ def list_assets():
         })
     finally:
         db.close()
+
+
+# ─── Aggregated Results ────────────────────────────────────────────────────
+
+@bp.get("/aggregate/<path:target>")
+@require_api_key
+def get_aggregated(target: str):
+    import json
+    from app.models import AggregatedResult
+
+    db = SessionLocal()
+    try:
+        page     = max(1, int(request.args.get("page", 1)))
+        per_page = min(200, int(request.args.get("per_page", 50)))
+        category = request.args.get("category", None)
+
+        base_q = (
+            db.query(AggregatedResult)
+            .filter_by(target=target)
+        )
+
+        # Summary — always full count per category
+        all_rows = base_q.all()
+        summary: dict[str, int] = {}
+        for row in all_rows:
+            summary[row.category] = summary.get(row.category, 0) + 1
+
+        # Paginated rows for selected category
+        if category:
+            filtered = base_q.filter_by(category=category)
+        else:
+            filtered = base_q
+
+        total = filtered.count()
+        rows  = (
+            filtered
+            .order_by(AggregatedResult.confidence.desc(),
+                      AggregatedResult.value)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        grouped: dict[str, list] = {
+            "subdomain": [], "port": [],
+            "http_endpoint": [], "vulnerability": [],
+        }
+        for row in rows:
+            sources = json.loads(row.sources or "[]")
+            meta    = json.loads(row.meta or "{}")
+            entry   = {
+                "value":      row.value,
+                "sources":    sources,
+                "confidence": row.confidence,
+                "first_seen": row.first_seen.isoformat() if row.first_seen else None,
+                "last_seen":  row.last_seen.isoformat()  if row.last_seen  else None,
+                **meta,
+            }
+            if row.category in grouped:
+                grouped[row.category].append(entry)
+
+        return jsonify({
+            "ok":      True,
+            "target":  target,
+            "summary": summary,
+            "results": grouped,
+            "pagination": {
+                "page":       page,
+                "per_page":   per_page,
+                "total":      total,
+                "total_pages": (total + per_page - 1) // per_page,
+                "category":   category,
+            },
+        })
+    finally:
+        db.close()

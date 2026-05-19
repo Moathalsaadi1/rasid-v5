@@ -420,3 +420,30 @@ export const adminAuditLogs = (
   if (params.action) qs.set("action", params.action);
   return request<AdminAuditLogsResponse>(apiKey, `/api/admin/audit-logs?${qs}`);
 };
+export interface AggregateResponse {
+  ok: true;
+  target: string;
+  summary: Record<string, number>;
+  results: {
+    subdomain: object[];
+    port: object[];
+    http_endpoint: object[];
+    vulnerability: object[];
+  };
+}
+
+export async function getAggregate(
+  apiKey: string,
+  target: string,
+  params?: { page?: number; per_page?: number; category?: string },
+): Promise<AggregateResponse> {
+  const q = new URLSearchParams();
+  if (params?.page)     q.set("page",     String(params.page));
+  if (params?.per_page) q.set("per_page", String(params.per_page));
+  if (params?.category) q.set("category", params.category);
+  const qs = q.toString() ? `?${q.toString()}` : "";
+  return request<AggregateResponse>(
+    apiKey,
+    `/api/aggregate/${encodeURIComponent(target)}${qs}`,
+  );
+}

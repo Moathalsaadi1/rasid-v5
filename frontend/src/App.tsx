@@ -17,12 +17,14 @@ import ScansView from "./views/ScansView";
 import SettingsView from "./views/SettingsView";
 import ToolCommandsView from "./views/ToolCommandsView";
 import type { DashboardData } from "./types";
+import AggregateView from "./views/AggregateView";
 
 type ViewKey =
   | "dashboard"
   | "scans"
   | "findings"
   | "assets"
+  | "aggregate"
   | "tool_commands"
   | "notifications"
   | "admin"
@@ -108,6 +110,7 @@ export default function App() {
     scans: "Scans",
     findings: "Findings",
     assets: "Assets",
+    aggregate: "Aggregate Intelligence",
     tool_commands: "Tool Commands",
     notifications: "Notifications",
     admin: "Admin",
@@ -128,6 +131,8 @@ export default function App() {
         );
       case "findings":
         return <FindingsView apiKey={apiKey} />;
+      case "aggregate":
+        return <AggregateView apiKey={apiKey} />;
       case "assets":
         return <AssetsView apiKey={apiKey} />;
       case "tool_commands":

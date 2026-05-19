@@ -272,3 +272,37 @@ class LegalAcceptance(Base):
     terms_version = Column(String(20), nullable=False)
     accepted_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     ip_address = Column(String(64), nullable=True)
+# ─── Aggregation Layer ──────────────────────────────────────────────────────
+
+class AggregatedResult(Base):
+    """Deduplicated cross-tool finding with source attribution.
+    
+    Updated automatically after every scan completes.
+    One row per unique (target, category, value) combination.
+    """
+    __tablename__ = "aggregated_results"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    target     = Column(String(255), nullable=False, index=True)
+    category   = Column(String(30),  nullable=False)
+    # subdomain | port | http_endpoint | vulnerability
+
+    value      = Column(String(500), nullable=False)
+    # sub.example.com | 443/tcp | https://... | CVE-2021-XXXX
+
+    sources    = Column(Text, nullable=False, default="[]")
+    # JSON: ["subfinder", "amass"]
+
+    confidence = Column(String(10), nullable=False, default="low")
+    # low=1 source, medium=2, high=3+
+
+    meta       = Column(Text, nullable=True)
+    # JSON: IPs, service name, severity, etc.
+
+    first_seen = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_seen  = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("target", "category", "value",
+                         name="uq_aggregated_target_category_value"),
+    )

@@ -39,6 +39,7 @@ from app.tools.parsers import (
 from app.tools import persistence as P
 from app.tools.registry import get_tool
 from app.tools.runner import run_tool
+from app.aggregator import aggregate_target
 from app.validation import validate_target
 
 
@@ -175,7 +176,13 @@ def _run_scan_task(
         custom_args = _resolve_args(db, job.user_id, tool_name)
 
         try:
-            return handler(db=db, job=job, spec=spec, custom_args=custom_args)
+            result = handler(db=db, job=job, spec=spec, custom_args=custom_args)
+            if result.get("ok"):
+                try:
+                    aggregate_target(db, job.target)
+                except Exception as agg_err:
+                    logger.warning("Aggregation failed for %s: %s", job.target, agg_err)
+            return result
         except Exception as e:  # noqa: BLE001
             # Full traceback to the server log only — the client just gets
             # the exception class name. Surfacing str(e) verbatim would
