@@ -576,8 +576,7 @@ def run_masscan_scan(scan_id: int) -> dict:
 # ─── massdns ───────────────────────────────────────────────────────────────
 
 def _handle_massdns(*, db, job: ScanJob, spec, custom_args) -> dict[str, Any]:
-    stdin = job.target + "\n"
-    result = run_tool(spec, target=job.target, args=custom_args, stdin_data=stdin)
+    result = run_tool(spec, target=job.target, args=custom_args)
     job.stdout = result.raw_text
     job.stderr = result.stderr
     job.finished_at = _now()

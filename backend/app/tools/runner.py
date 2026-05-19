@@ -55,7 +55,8 @@ def run_tool(
         "image": spec.image,
         "command": raw_args,
         "detach": True,
-        "tty": True,
+        # tty breaks stdin attach; only use tty when we DON'T need stdin
+        "tty": stdin_data is None,
         "dns": ["8.8.8.8", "1.1.1.1"],
     }
 
@@ -70,15 +71,19 @@ def run_tool(
 
     try:
         if stdin_data is not None:
-            sock = container.attach_socket(params={"stdin": 1, "stream": 1})
             try:
-                sock._sock.sendall(stdin_data.encode("utf-8"))  # type: ignore[attr-defined]
-                sock._sock.shutdown(1)  # type: ignore[attr-defined]
-            finally:
+                sock = client.api.attach_socket(
+                    container.id,
+                    params={"stdin": 1, "stream": 1, "stdout": 0, "stderr": 0},
+                )
+                sock._sock.sendall(stdin_data.encode("utf-8"))
+                sock._sock.shutdown(1)
                 sock.close()
+                logger.info("Sent stdin (%d bytes) to container", len(stdin_data))
+            except Exception as e:  # noqa: BLE001
+                logger.error("Failed to send stdin: %s", e)
 
-        # Poll for container exit instead of long-running HTTP wait() which
-        # hits the docker client's read timeout on long scans (amass, nuclei).
+        # Poll for container exit (avoids long HTTP wait() timeouts)
         start = time.time()
         while True:
             container.reload()

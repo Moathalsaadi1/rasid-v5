@@ -160,6 +160,7 @@ REGISTRY: dict[str, ToolSpec] = {
         # presence. A bigger pipeline (subfinder → massdns) is the typical
         # production use, which is left as a future enhancement.
         default_args=(
+            "{TARGET}",
             "-r", "/etc/massdns/resolvers.txt",
             "-t", "A",
             "-o", "J",
@@ -168,8 +169,8 @@ REGISTRY: dict[str, ToolSpec] = {
         allowed_flags=frozenset({
             "-r", "-t", "-o", "-q", "-c", "-s", "--retry",
         }),
-        accepts_stdin=True,
-        target_position="via:stdin",
+        accepts_stdin=False,
+        target_position="via:{TARGET}",
         timeout_seconds=300,
     ),
 }
