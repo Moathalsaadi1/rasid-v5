@@ -4,6 +4,7 @@ Container runner — single point of contact between RASID and DinD.
 from __future__ import annotations
 
 import os
+import time
 from typing import Sequence
 
 import docker  # type: ignore
@@ -76,10 +77,22 @@ def run_tool(
             finally:
                 sock.close()
 
-        # انتظر الـ container ينتهي
-        container.wait(timeout=spec.timeout_seconds)
+        # Poll for container exit instead of long-running HTTP wait() which
+        # hits the docker client's read timeout on long scans (amass, nuclei).
+        start = time.time()
+        while True:
+            container.reload()
+            if container.status in ("exited", "dead"):
+                break
+            if time.time() - start > spec.timeout_seconds:
+                logger.warning("Container %s exceeded timeout, killing", container.id[:12])
+                try:
+                    container.kill()
+                except Exception:  # noqa: BLE001
+                    pass
+                break
+            time.sleep(3)
 
-        # اقرأ الـ exit code من attrs مباشرة (أدق من wait مع tty)
         container.reload()
         exit_code = container.attrs["State"]["ExitCode"]
         logger.info("Container %s exited with code %s", container.id[:12], exit_code)

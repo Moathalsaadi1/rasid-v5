@@ -496,7 +496,21 @@ def run_amass_scan(scan_id: int) -> dict:
 # ─── masscan ───────────────────────────────────────────────────────────────
 
 def _handle_masscan(*, db, job: ScanJob, spec, custom_args) -> dict[str, Any]:
-    result = run_tool(spec, target=job.target, args=custom_args)
+    # masscan only accepts IP addresses, not hostnames — resolve if needed.
+    import socket, re
+    target = job.target
+    if not re.match(r"^\d{1,3}(\.\d{1,3}){3}$", target):
+        try:
+            target = socket.gethostbyname(job.target)
+            logger.info("Resolved %s -> %s for masscan", job.target, target)
+        except socket.gaierror as e:
+            job.status = ScanStatus.FAILED.value
+            job.error_message = f"Could not resolve hostname '{job.target}': {e}"
+            job.finished_at = _now()
+            db.commit()
+            return {"ok": False, "scan_id": job.id, "error": job.error_message}
+
+    result = run_tool(spec, target=target, args=custom_args)
     job.stdout = result.raw_text
     job.stderr = result.stderr
     job.finished_at = _now()

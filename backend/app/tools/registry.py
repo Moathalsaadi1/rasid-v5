@@ -112,18 +112,23 @@ REGISTRY: dict[str, ToolSpec] = {
         timeout_seconds=300,
     ),
 
-    "amass": ToolSpec(
-        name="amass",
-        image=_img("TOOL_AMASS_IMAGE", "caffix/amass:latest"),
-        description="Active and passive subdomain enumeration",
-        # 'enum -passive' avoids hammering the target — safer default.
-        default_args=("enum", "-passive", "-d", "{TARGET}", "-json", "-"),
-        allowed_flags=frozenset({
-            "enum", "intel", "-d", "-passive", "-active", "-json",
-            "-timeout", "-silent", "-nocolor", "-",
-        }),
-        target_position="via:-d",
-        timeout_seconds=900,
+   "amass": ToolSpec(
+    name="amass",
+    image=_img("TOOL_AMASS_IMAGE", "caffix/amass:latest"),
+    description="Active and passive subdomain enumeration",
+    default_args=(
+        "enum", "-passive",
+        "-d", "{TARGET}",
+        "-nocolor",
+        "-timeout", "5",        # حد أقصى 5 دقائق
+        "-norecursive",         # ما يعمل recursive brute force
+    ),
+    allowed_flags=frozenset({
+        "enum", "intel", "-d", "-passive", "-active",
+        "-timeout", "-nocolor", "-norecursive",
+    }),
+    target_position="via:-d",
+    timeout_seconds=1800,       # 30 دقيقة كحد أقصى للـ container
     ),
 
     "masscan": ToolSpec(
