@@ -84,7 +84,7 @@ REGISTRY: dict[str, ToolSpec] = {
      default_args=(
     "-u", "{TARGET}",
     "-jsonl", "-omit-raw",
-    "-tags", "kev",                         
+    "-tags", "kev,cve",                         
     "-severity", "medium,high,critical",
     "-rl", "25", "-c", "5",
     "-timeout", "5", "-retries", "1",
@@ -96,7 +96,7 @@ REGISTRY: dict[str, ToolSpec] = {
             "-templates", "-no-color",
         }),
         target_position="via:-u",
-        timeout_seconds=900,
+        timeout_seconds=1800,
     ),
 
     "subfinder": ToolSpec(

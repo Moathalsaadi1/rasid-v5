@@ -191,3 +191,21 @@ def get_aggregated(target: str):
         })
     finally:
         db.close()
+
+
+# ─── Vulnerability Intelligence ────────────────────────────────────────────
+
+@bp.get("/vuln-intel/<string:cve_id>")
+@require_api_key
+def get_vuln_intel_endpoint(cve_id: str):
+    """Returns educational CVE data from NVD (cached 24h)."""
+    from app.vuln_intel import get_vuln_intel
+
+    db = SessionLocal()
+    try:
+        data = get_vuln_intel(db, cve_id)
+        if not data:
+            return jsonify({"ok": False, "error": f"No data found for {cve_id}"}), 404
+        return jsonify({"ok": True, "intel": data})
+    finally:
+        db.close()

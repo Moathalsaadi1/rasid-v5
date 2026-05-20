@@ -46,6 +46,20 @@ def parse(raw_text: str) -> list[dict[str, Any]]:
         matcher_name = item.get("matcher-name")
         extracted_results = item.get("extracted-results")
 
+        # Extract CVE ID from template-id or classification
+        import re
+        cve_id = None
+        classification = info.get("classification") or {}
+        cve_list = classification.get("cve-id") or []
+        if isinstance(cve_list, list) and cve_list:
+            cve_id = cve_list[0].upper()
+        elif isinstance(cve_list, str) and cve_list:
+            cve_id = cve_list.upper()
+        if not cve_id and template_id:
+            m = re.search(r"CVE-\d{4}-\d+", template_id, re.IGNORECASE)
+            if m:
+                cve_id = m.group(0).upper()
+
         evidence_parts: list[str] = []
         if template_id:
             evidence_parts.append(f"template={template_id}")
@@ -61,6 +75,7 @@ def parse(raw_text: str) -> list[dict[str, Any]]:
             "severity": severity,
             "matched_at": matched_at,
             "template_id": template_id,
+            "cve_id": cve_id,
             "matcher_name": matcher_name,
             "extracted_results": extracted_results,
             "evidence": " | ".join(evidence_parts) if evidence_parts else None,

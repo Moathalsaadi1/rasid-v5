@@ -374,7 +374,9 @@ def _handle_nuclei(*, db, job: ScanJob, spec, custom_args) -> dict[str, Any]:
             asset_id=target_asset.id,
             title=f["name"],
             severity=f["severity"],
-            description=f"Nuclei identified a potential issue on {f.get('matched_at') or job.target}.",
+            description=(
+                f"{f['cve_id']} — " if f.get('cve_id') else ""
+            ) + f"Nuclei identified a potential issue on {f.get('matched_at') or job.target}.",
             confidence="high",
             evidence=f["evidence"],
             recommendation="Validate the finding and remediate according to the affected technology and template guidance.",

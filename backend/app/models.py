@@ -306,3 +306,13 @@ class AggregatedResult(Base):
         UniqueConstraint("target", "category", "value",
                          name="uq_aggregated_target_category_value"),
     )
+   # ─── Vulnerability Intelligence Cache ──────────────────────────────────────
+
+class VulnCache(Base):
+    """Cached CVE data from NVD API — refreshed every 24 hours."""
+    __tablename__ = "vuln_cache"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    cve_id     = Column(String(30), nullable=False, unique=True, index=True)
+    data       = Column(Text, nullable=False)   # JSON from NVD
+    fetched_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
