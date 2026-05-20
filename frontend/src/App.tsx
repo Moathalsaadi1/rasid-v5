@@ -18,6 +18,7 @@ import SettingsView from "./views/SettingsView";
 import ToolCommandsView from "./views/ToolCommandsView";
 import type { DashboardData } from "./types";
 import AggregateView from "./views/AggregateView";
+import DiffView from "./views/DiffView";
 
 type ViewKey =
   | "dashboard"
@@ -25,6 +26,7 @@ type ViewKey =
   | "findings"
   | "assets"
   | "aggregate"
+  | "diff"
   | "tool_commands"
   | "notifications"
   | "admin"
@@ -111,6 +113,7 @@ export default function App() {
     findings: "Findings",
     assets: "Assets",
     aggregate: "Aggregate Intelligence",
+    diff: "Scan Diff",
     tool_commands: "Tool Commands",
     notifications: "Notifications",
     admin: "Admin",
@@ -131,6 +134,8 @@ export default function App() {
         );
       case "findings":
         return <FindingsView apiKey={apiKey} />;
+      case "diff":
+        return <DiffView apiKey={apiKey} />;
       case "aggregate":
         return <AggregateView apiKey={apiKey} />;
       case "assets":

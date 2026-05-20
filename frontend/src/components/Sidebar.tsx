@@ -14,6 +14,7 @@ const ITEMS: SidebarItem[] = [
   { key: "findings", label: "Findings", icon: "▲" },
   { key: "assets", label: "Assets", icon: "◆" },
   { key: "aggregate", label: "Aggregate", icon: "⬡" },
+  { key: "diff", label: "Scan Diff", icon: "⚖" },
   { key: "tool_commands", label: "Tool Commands", icon: "⚒" },
   { key: "notifications", label: "Notifications", icon: "🔔" },
   { key: "admin", label: "Admin", icon: "⚙", adminOnly: true },

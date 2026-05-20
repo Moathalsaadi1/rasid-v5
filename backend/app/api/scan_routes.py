@@ -303,3 +303,102 @@ def get_scan_raw(scan_id: int):
         })
     finally:
         db.close()
+
+
+# ─── Scan Diff ─────────────────────────────────────────────────────────────
+
+@bp.get("/scans/diff")
+@require_api_key
+def scan_diff():
+    """
+    Compare two scans and return added/removed/unchanged findings.
+    Query params: scan_a=<id>&scan_b=<id>
+    """
+    import json
+    from app.models import ScanJob, ScanAsset, ScanService, ScanWebEndpoint, Finding, Asset, Service, WebEndpoint
+
+    db = SessionLocal()
+    try:
+        scan_a_id = request.args.get("scan_a", type=int)
+        scan_b_id = request.args.get("scan_b", type=int)
+
+        if not scan_a_id or not scan_b_id:
+            return jsonify({"ok": False, "error": "scan_a and scan_b required"}), 400
+
+        scan_a = db.query(ScanJob).filter_by(id=scan_a_id).one_or_none()
+        scan_b = db.query(ScanJob).filter_by(id=scan_b_id).one_or_none()
+
+        if not scan_a or not scan_b:
+            return jsonify({"ok": False, "error": "One or both scans not found"}), 404
+
+        if scan_a.tool != scan_b.tool:
+            return jsonify({"ok": False, "error": "Scans must use the same tool"}), 400
+
+        def get_items(scan: ScanJob) -> set[str]:
+            """Extract comparable items from a scan."""
+            items = set()
+            tool = scan.tool
+
+            if tool in ("nmap", "masscan"):
+                rows = (db.query(ScanService, Service, Asset)
+                    .join(Service, ScanService.service_id == Service.id)
+                    .join(Asset, Service.ip_asset_id == Asset.id)
+                    .filter(ScanService.scan_id == scan.id).all())
+                for _, svc, asset in rows:
+                    items.add(f"{asset.value}:{svc.port}/{svc.protocol} ({svc.name})")
+
+            elif tool in ("subfinder", "amass", "massdns"):
+                rows = (db.query(ScanAsset, Asset)
+                    .join(Asset, ScanAsset.asset_id == Asset.id)
+                    .filter(ScanAsset.scan_id == scan.id).all())
+                for _, asset in rows:
+                    items.add(asset.value)
+
+            elif tool == "httpx":
+                rows = (db.query(ScanWebEndpoint, WebEndpoint)
+                    .join(WebEndpoint, ScanWebEndpoint.web_endpoint_id == WebEndpoint.id)
+                    .filter(ScanWebEndpoint.scan_id == scan.id).all())
+                for _, ep in rows:
+                    items.add(f"{ep.url} [{ep.status_code}]")
+
+            elif tool == "nuclei":
+                findings = db.query(Finding).filter_by(scan_id=scan.id).all()
+                for f in findings:
+                    items.add(f"{f.title} ({f.severity})")
+
+            return items
+
+        set_a = get_items(scan_a)
+        set_b = get_items(scan_b)
+
+        added     = sorted(set_b - set_a)
+        removed   = sorted(set_a - set_b)
+        unchanged = sorted(set_a & set_b)
+
+        return jsonify({
+            "ok": True,
+            "scan_a": {
+                "id": scan_a.id, "tool": scan_a.tool,
+                "target": scan_a.target,
+                "created_at": scan_a.created_at.isoformat(),
+                "items_count": len(set_a),
+            },
+            "scan_b": {
+                "id": scan_b.id, "tool": scan_b.tool,
+                "target": scan_b.target,
+                "created_at": scan_b.created_at.isoformat(),
+                "items_count": len(set_b),
+            },
+            "diff": {
+                "added":     added,
+                "removed":   removed,
+                "unchanged": unchanged,
+                "summary": {
+                    "added":     len(added),
+                    "removed":   len(removed),
+                    "unchanged": len(unchanged),
+                },
+            },
+        })
+    finally:
+        db.close()
