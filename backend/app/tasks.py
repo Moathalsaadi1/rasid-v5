@@ -644,3 +644,11 @@ TASK_DISPATCH = {
     "masscan": run_masscan_scan,
     "massdns": run_massdns_scan,
 }
+
+
+# ─── Dorking Task ───────────────────────────────────────────────────────────
+
+@celery.task(name="run_dork_scan", bind=True)
+def run_dork_scan(self, target: str, category: str) -> dict:
+    from app.dorking_engine import run_dorks
+    return run_dorks(category, target)

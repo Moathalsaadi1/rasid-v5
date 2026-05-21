@@ -209,3 +209,40 @@ def get_vuln_intel_endpoint(cve_id: str):
         return jsonify({"ok": True, "intel": data})
     finally:
         db.close()
+
+
+# ─── Google Dorking ────────────────────────────────────────────────────────
+
+@bp.get("/dork/categories")
+@require_api_key
+def dork_categories():
+    from app.dork_library import list_categories
+    return jsonify({"ok": True, "categories": list_categories()})
+
+
+@bp.post("/dork/run")
+@require_api_key
+def dork_run():
+    from app.tasks import run_dork_scan
+    body = request.get_json() or {}
+    target   = body.get("target", "").strip()
+    category = body.get("category", "").strip()
+    if not target or not category:
+        return jsonify({"ok": False, "error": "target and category required"}), 400
+    task = run_dork_scan.delay(target, category)
+    return jsonify({"ok": True, "job_id": task.id, "status": "queued"})
+
+
+@bp.get("/dork/result/<string:job_id>")
+@require_api_key
+def dork_result(job_id: str):
+    from celery.result import AsyncResult
+    from app.celery_app import celery
+    result = AsyncResult(job_id, app=celery)
+    if result.state == "PENDING":
+        return jsonify({"ok": True, "status": "pending"})
+    elif result.state == "SUCCESS":
+        return jsonify({"ok": True, "status": "done", "data": result.result})
+    elif result.state == "FAILURE":
+        return jsonify({"ok": False, "status": "failed", "error": str(result.result)})
+    return jsonify({"ok": True, "status": result.state.lower()})

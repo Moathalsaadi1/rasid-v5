@@ -19,6 +19,7 @@ import ToolCommandsView from "./views/ToolCommandsView";
 import type { DashboardData } from "./types";
 import AggregateView from "./views/AggregateView";
 import DiffView from "./views/DiffView";
+import DorkView from "./views/DorkView";
 
 type ViewKey =
   | "dashboard"
@@ -27,6 +28,7 @@ type ViewKey =
   | "assets"
   | "aggregate"
   | "diff"
+  | "dork"
   | "tool_commands"
   | "notifications"
   | "admin"
@@ -114,6 +116,7 @@ export default function App() {
     assets: "Assets",
     aggregate: "Aggregate Intelligence",
     diff: "Scan Diff",
+    dork: "Google Dorking",
     tool_commands: "Tool Commands",
     notifications: "Notifications",
     admin: "Admin",
@@ -134,6 +137,8 @@ export default function App() {
         );
       case "findings":
         return <FindingsView apiKey={apiKey} />;
+      case "dork":
+        return <DorkView apiKey={apiKey} />;
       case "diff":
         return <DiffView apiKey={apiKey} />;
       case "aggregate":
