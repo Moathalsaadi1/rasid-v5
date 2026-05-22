@@ -9,7 +9,8 @@
 
 ## 1) ملخّص تنفيذي
 
-تم تنفيذ **كل المراحل الست** التي اقترحتها في التقرير الأولي. النتيجة:
+تم تنفيذ كل المراحل الست المحددة في مرحلة التخطيط.
+ النتيجة:
 
 - ✅ **93 ملف** في المشروع (مقارنة بـ ~34 في v4).
 - ✅ **71 unit test** ينجح بالكامل (`pytest tests/`).
@@ -256,7 +257,8 @@ CREATE TABLE legal_acceptances (
 
 | القرار | التبرير |
 |---|---|
-| **Stack المختار** (Flask/Celery/Postgres/React) | احترام قرارك في v4 — لم أُغيّره |
+| **Stack المختار** (Flask/Celery/Postgres/React) | نفس Stack الـ v4 — Flask/Celery/Postgres/React
+ |
 | **DinD مع `cap_add: [NET_ADMIN, NET_RAW]`** لـ masscan | masscan يحتاج raw sockets — وإلا يفشل صامتاً |
 | **massdns عبر Dockerfile محلي** | الصور الجاهزة لا تتضمن resolver list؛ صورتنا تضع 8 resolvers موثوقة في `/etc/massdns/resolvers.txt` |
 | **Whitelist للـ custom args** (لا free-form) | الأمان أولاً — `-iL /etc/passwd` لـ nmap كان سيكون قاتلاً |
