@@ -629,27 +629,6 @@ pytest tests/ -v
 
 ---
 
-## 🆚 الفروقات مع v4
-
-| العنصر | v4 | v5 (الحالي) |
-|---|---|---|
-| عدد الأدوات | 3 | **7** |
-| Custom Tool Args | ❌ | ✅ FR-12 |
-| إشعارات فورية | ❌ | ✅ FR-10 |
-| Audit Logging | ❌ | ✅ NFR-7 |
-| Legal Gating | ❌ | ✅ NFR-9 |
-| حماية SSRF | بسيطة | ✅ متقدمة |
-| Rate Limiting | ❌ | ✅ |
-| صيغ التقارير | JSON, HTML | ✅ + Markdown |
-| إلغاء/حذف الفحص | ❌ | ✅ |
-| اختبارات | ❌ | ✅ pytest |
-| قاعدة البيانات | SQLite | ✅ PostgreSQL 16 |
-| **Aggregator/Dedup** | ❌ | ✅ **جديد** |
-| **Vulnerability Intel** | ❌ | ✅ **جديد** |
-| **Scan Diffing** | ❌ | ✅ **جديد** |
-| **Google Dorking** | ❌ | ✅ **جديد** |
-
----
 
 ## 🙏 الشكر والمراجع
 
