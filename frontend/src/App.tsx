@@ -34,9 +34,6 @@ type ViewKey =
   | "admin"
   | "settings";
 
-// Top-level shell: auth gate, sidebar/topbar, view router, and the two
-// global modals (scan detail + legal acceptance). Every domain concern
-// lives in its dedicated component under views/.
 export default function App() {
   const session = useSession();
   const { apiKey, user, bootstrapping, setSession, setApiKey, logout, error: sessionError } =
@@ -45,18 +42,12 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewKey>("dashboard");
   const [globalError, setGlobalError] = useState("");
 
-  // dashboard data (kept here so refresh button can trigger reload)
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashLoading, setDashLoading] = useState(false);
 
-  // scan detail modal
   const [openScanId, setOpenScanId] = useState<number | null>(null);
-
-  // legal modal — shown either explicitly via Sidebar settings, or
-  // automatically when ScansView reports the gate is closed.
   const [legalOpen, setLegalOpen] = useState(false);
 
-  // notifications (also fed to Sidebar & Topbar for unread badge)
   const notif = useNotifications(apiKey);
 
   const loadDashboard = useCallback(async () => {
@@ -72,12 +63,9 @@ export default function App() {
     }
   }, [apiKey]);
 
-  // Reload dashboard whenever we land on it.
   useEffect(() => {
     if (apiKey && currentView === "dashboard") loadDashboard();
   }, [apiKey, currentView, loadDashboard]);
-
-  // ── Render ──────────────────────────────────────────────────────────
 
   if (bootstrapping) {
     return (
@@ -101,8 +89,6 @@ export default function App() {
       <LoginPage
         onAuthSuccess={(key, u) => {
           setSession(key, u);
-          // Immediately ask the user to accept the legal terms; the modal
-          // will detect existing acceptance and close itself if not needed.
           setLegalOpen(true);
         }}
       />
@@ -187,6 +173,8 @@ export default function App() {
         color: "#e5e7eb",
         display: "flex",
         fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       <Sidebar
@@ -199,57 +187,55 @@ export default function App() {
       <main
         style={{
           flex: 1,
+          minWidth: 0,
           padding: "24px 28px",
           overflowX: "hidden",
           background:
             "radial-gradient(circle at top right, rgba(20,184,166,0.06), transparent 35%)",
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Topbar
-            title={titleMap[currentView]}
-            user={user}
-            onLogout={logout}
-            onRefresh={currentView === "dashboard" ? loadDashboard : undefined}
-            unreadCount={notif.unreadCount}
-            onOpenNotifications={() => setCurrentView("notifications")}
-          />
+        <Topbar
+          title={titleMap[currentView]}
+          user={user}
+          onLogout={logout}
+          onRefresh={currentView === "dashboard" ? loadDashboard : undefined}
+          unreadCount={notif.unreadCount}
+          onOpenNotifications={() => setCurrentView("notifications")}
+        />
 
-          {(globalError || sessionError) && (
-            <div
+        {(globalError || sessionError) && (
+          <div
+            style={{
+              ...g.errorBox,
+              marginBottom: 16,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{globalError || sessionError}</span>
+            <button
+              onClick={() => setGlobalError("")}
               style={{
-                ...g.errorBox,
-                marginBottom: 16,
-                display: "flex",
-                justifyContent: "space-between",
+                background: "none",
+                border: "none",
+                color: "#f87171",
+                cursor: "pointer",
               }}
             >
-              <span>{globalError || sessionError}</span>
-              <button
-                onClick={() => setGlobalError("")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#f87171",
-                  cursor: "pointer",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
+              ✕
+            </button>
+          </div>
+        )}
 
-          {view}
-        </div>
+        {view}
       </main>
 
-      {/* Global modals */}
       <ScanModal
         apiKey={apiKey}
         scanId={openScanId}
         onClose={() => setOpenScanId(null)}
         onChanged={() => {
-          // Refresh anything that depends on scan state.
           if (currentView === "dashboard") loadDashboard();
         }}
       />
