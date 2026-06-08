@@ -8,10 +8,12 @@ celery = Celery(
     "rasid",
     broker=broker_url,
     backend=result_backend,
+    include=[
+        "app.tasks",
+        "app.pipeline_task",
+    ],
 )
 
 celery.conf.update(
     task_track_started=True,
 )
-
-import app.tasks  # noqa

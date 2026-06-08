@@ -7,6 +7,7 @@ import {
 } from "../api/client";
 import Badge from "../components/Badge";
 import Pagination from "../components/Pagination";
+import PipelineLaunchModal from "./PipelineLaunchModal";
 import { fmtDate, STATUS_COLOR, toolMeta } from "../utils/format";
 import { g } from "../utils/styles";
 import type { ScanItem, ScanStatus, ToolSpec } from "../types";
@@ -35,6 +36,9 @@ export default function ScansView({
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  // pipeline modal
+  const [showPipeline, setShowPipeline] = useState(false);
 
   // create-form state
   const [target, setTarget] = useState("");
@@ -122,7 +126,7 @@ export default function ScansView({
           style={{
             padding: 20,
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+            gridTemplateColumns: "1fr auto auto auto",
             gap: 12,
           }}
         >
@@ -153,6 +157,17 @@ export default function ScansView({
             style={g.btnPrimary}
           >
             {creating ? "Starting…" : "▶ Start Scan"}
+          </button>
+          <button
+            onClick={() => setShowPipeline(true)}
+            style={{
+              ...g.btnPrimary,
+              background: "#0f4c3a",
+              color: "#14b8a6",
+              border: "1px solid #14b8a644",
+            }}
+          >
+            🚀 Pipeline
           </button>
         </div>
         {createError && (
@@ -311,6 +326,19 @@ export default function ScansView({
           onPage={(p) => setPage(p)}
         />
       </div>
+
+      {/* ── Pipeline Launch Modal ─────────────────────────────────────── */}
+      {showPipeline && (
+        <PipelineLaunchModal
+          apiKey={apiKey}
+          onClose={() => setShowPipeline(false)}
+          onLaunched={(id) => {
+            setShowPipeline(false);
+            onOpenScan(id);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

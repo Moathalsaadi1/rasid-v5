@@ -81,6 +81,13 @@ def create_scan():
     if not target:
         return jsonify({"ok": False, "error": "target is required"}), 400
 
+    # pipeline له endpoint خاص — لا يُقبل هنا
+    if tool == "pipeline":
+        return jsonify({
+            "ok": False,
+            "error": "Use POST /api/scans/pipeline for compound pipeline scans.",
+        }), 400
+
     if not is_known_tool(tool):
         return jsonify({
             "ok": False,
@@ -366,6 +373,12 @@ def scan_diff():
                 for f in findings:
                     items.add(f"{f.title} ({f.severity})")
 
+            elif tool == "pipeline":
+                # pipeline يجمع نتائج كل الأدوات — نعرض الـ findings كلها
+                findings = db.query(Finding).filter_by(scan_id=scan.id).all()
+                for f in findings:
+                    items.add(f"{f.title} | {f.severity} | {f.evidence or ''}")
+
             return items
 
         set_a = get_items(scan_a)
@@ -400,5 +413,80 @@ def scan_diff():
                 },
             },
         })
+    finally:
+        db.close()
+
+
+@bp.post("/scans/pipeline")
+@require_api_key
+def create_pipeline_scan():
+    """
+    POST /api/scans/pipeline
+    Body: {"target": "example.com"}
+
+    يُشغِّل الـ pipeline المركب الكامل بالترتيب:
+    Amass+Subfinder → Masscan → Httpx → Nmap → Nuclei
+    """
+    from app.pipeline_task import run_pipeline_scan
+
+    data = get_json_body()
+    target = (data.get("target") or "").strip()
+
+    if not target:
+        return jsonify({"ok": False, "error": "target is required"}), 400
+
+    # التحقق من الهدف مبكراً قبل إنشاء أي row في DB
+    target_check = validate_target(target)
+    if not target_check.ok:
+        return jsonify({"ok": False, "error": target_check.reason}), 400
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == g.current_user["id"]).one()
+
+        # بوابة القبول القانوني
+        if not has_accepted_terms(db, user.id):
+            return jsonify({
+                "ok": False,
+                "error": "legal_acceptance_required",
+                "message": "Please accept the platform terms before running scans.",
+            }), 403
+
+        # حد المستخدم الضيف
+        if user.role == UserRole.GUEST.value and user.scan_count >= GUEST_SCAN_LIMIT:
+            return jsonify({
+                "ok": False,
+                "error": f"Guest accounts are limited to {GUEST_SCAN_LIMIT} scans.",
+            }), 403
+
+        # إنشاء ScanJob بـ tool="pipeline"
+        job = ScanJob(
+            user_id=user.id,
+            target=target,
+            tool="pipeline",          # اسم خاص للـ pipeline
+            status=ScanStatus.PENDING.value,
+        )
+        db.add(job)
+        user.scan_count += 1
+        db.flush()
+
+        audit(db, user_id=user.id, action="scan.create",
+              resource_type="scan", resource_id=str(job.id),
+              extra={"target": target, "tool": "pipeline"})
+        db.commit()
+        db.refresh(job)
+
+        # إرسال الـ task لـ Celery
+        run_pipeline_scan.delay(job.id)
+
+        return jsonify({
+            "ok": True,
+            "scan_id": job.id,
+            "status": job.status,
+            "tool": "pipeline",
+            "target": job.target,
+            "message": "Pipeline started: Amass+Subfinder → Masscan → Httpx → Nmap → Nuclei",
+        }), 201
+
     finally:
         db.close()

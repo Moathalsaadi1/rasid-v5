@@ -186,3 +186,5 @@ def all_tool_names() -> list[str]:
 
 def is_known_tool(name: str) -> bool:
     return name in REGISTRY
+    
+  
